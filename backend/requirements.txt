@@ -1,0 +1,47 @@
+# ── Web framework ─────────────────────────────────────────
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+
+# ── Database ──────────────────────────────────────────────
+sqlalchemy[asyncio]==2.0.36
+asyncpg==0.30.0
+alembic==1.14.0
+
+# ── Settings & validation ─────────────────────────────────
+pydantic==2.9.2
+pydantic-settings==2.6.1
+
+# ── HTTP client (for GitHub API + OpenRouter) ─────────────
+httpx==0.27.2
+
+# ── Redis + job queue ─────────────────────────────────────
+redis==5.2.0
+arq==0.26.1
+
+# ── LLM ───────────────────────────────────────────────────
+langchain-groq==0.2.1
+langgraph==0.2.50
+langchain-core==0.3.20
+openai==1.54.4            # openai SDK works for openrouter (same API format)
+
+# ── Auth ──────────────────────────────────────────────────
+python-jose[cryptography]==3.3.0    # JWT tokens
+passlib[bcrypt]==1.7.4              # password hashing (for internal tokens)
+python-multipart==0.0.12            # form data parsing (OAuth flow)
+
+# ── Code analysis (AST + regex) ───────────────────────────
+bandit==1.7.10                      # Python AST security scanner we build on top of
+libcst==1.5.0                       # concrete syntax tree — better than ast module
+semgrep==1.90.0                     # pattern-based code scanner
+
+# ── Utilities ─────────────────────────────────────────────
+python-dotenv==1.0.1
+tenacity==9.0.0                     # retry logic for LLM API calls
+structlog==24.4.0                   # structured logging (not print statements)
+
+# ── Dev only ──────────────────────────────────────────────
+pytest==8.3.3
+pytest-asyncio==0.24.0
+httpx==0.27.2                       # also used for testing FastAPI
+
+psycopg2-binary==2.9.11

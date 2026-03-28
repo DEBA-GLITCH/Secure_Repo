@@ -1,0 +1,68 @@
+# docker-compose.yml
+# sits at the root of securerepo/
+# only runs Redis locally — Supabase handles Postgres
+
+
+services:
+
+  redis:
+    image: redis:7-alpine
+    # redis:7-alpine = official redis v7, alpine = tiny linux = small image size
+    container_name: securerepo_redis
+    ports:
+      - "6379:6379"
+      # left 6379  = port on YOUR machine (localhost:6379)
+      # right 6379 = port inside the container
+      # so your Python app talks to localhost:6379 and Docker forwards it in
+    volumes:
+      - redis_data:/data
+      # named volume = data survives container restarts
+      # without this, every docker compose restart wipes your Redis
+    command: redis-server --appendonly yes
+      # --appendonly yes = AOF persistence mode
+      # every write is logged to disk immediately
+      # if Redis crashes mid-scan, jobs aren't lost
+
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: securerepo_worker
+    # this runs the ARQ worker process — NOT the API
+    # ARQ worker = the process that picks jobs from Redis queue and runs them
+    command: python -m arq app.workers.arq_settings.WorkerSettings
+    env_file:
+      - ./backend/.env
+    depends_on:
+      - redis
+      # Docker won't start worker until redis container is up
+    volumes:
+      - ./backend:/app
+      # mounts your local backend/ folder into the container
+      # code changes reflect immediately without rebuilding image
+    restart: unless-stopped
+    # if worker crashes (OOM, unhandled exception), Docker restarts it
+    # "unless-stopped" = restart always EXCEPT when you manually stop it
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: securerepo_api
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    # --host 0.0.0.0 = listen on all interfaces (needed inside Docker)
+    # --reload = auto-restart when you change code (dev only)
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./backend/.env
+    depends_on:
+      - redis
+    volumes:
+      - ./backend:/app
+    restart: unless-stopped
+
+volumes:
+  redis_data:
+  # declares the named volume so Docker manages it
+  # stored at /var/lib/docker/volumes/securerepo_redis_data/
