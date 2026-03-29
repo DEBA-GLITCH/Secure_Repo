@@ -1,4 +1,4 @@
-# backend/app/services/github.py
+import asyncio
 import httpx
 from typing import Optional
 from app.config import get_settings
@@ -61,7 +61,7 @@ class GitHubClient:
             },
             # if GitHub takes more than 30s to respond, give up
             # prevents your worker from hanging forever
-            timeout=30.0,
+            timeout=60.0,
             follow_redirects=True,
         )
 
@@ -141,28 +141,24 @@ class GitHubClient:
         return scannable
 
     async def get_file_content(self, owner: str, repo: str, path: str) -> Optional[str]:
-        # fetches the actual content of a single file
-        # called only on files that passed the filter — not every file
-        try:
-            response = await self.client.get(
-                f"/repos/{owner}/{repo}/contents/{path}"
-            )
-            response.raise_for_status()
-            data = response.json()
+        for attempt in range(3):  # retry up to 3 times
+            try:
+                response = await self.client.get(
+                    f"/repos/{owner}/{repo}/contents/{path}"
+                )
+                response.raise_for_status()
+                data = response.json()
+                import base64
+                content = base64.b64decode(data["content"]).decode("utf-8", errors="replace")
+                return content
 
-            # GitHub returns file content as base64 encoded string
-            # we decode it to get the actual source code
-            import base64
-            content = base64.b64decode(data["content"]).decode("utf-8", errors="replace")
-            # errors="replace" means if there's a weird byte (binary file snuck through)
-            # replace it with ? instead of crashing
-            return content
+            except httpx.TimeoutException:
+                if attempt == 2:
+                    return None  # give up after 3 attempts
+                await asyncio.sleep(2 ** attempt)  # wait 1s, 2s before retrying
 
-        except (httpx.HTTPStatusError, UnicodeDecodeError, KeyError):
-            # file might be deleted between tree fetch and content fetch
-            # or it might be a binary file that slipped through
-            # either way, skip it gracefully
-            return None
+            except (httpx.HTTPStatusError, UnicodeDecodeError, KeyError):
+                return None
 
     async def close(self):
         # always close the HTTP client when done

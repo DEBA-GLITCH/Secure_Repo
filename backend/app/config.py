@@ -44,6 +44,12 @@ class Settings(BaseSettings):
     scan_job_timeout_seconds: int = 300
     cache_ttl_seconds: int = 3600
 
+    # ── LangSmith (observability) ─────────────────────────────
+    langchain_tracing_v2: bool = False
+    langchain_endpoint: str = "https://api.smith.langchain.com"
+    langchain_api_key: str = ""
+    langchain_project: str = "securerepo"
+
     class Config:
         # tells pydantic where to read env vars from
         env_file = ".env"
