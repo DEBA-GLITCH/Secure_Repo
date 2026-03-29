@@ -21,4 +21,4 @@ Thumbs.db
 
 # Temp files from scanning
 /tmp/
-EOF
+EOFbackend/alembic.ini
